@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from sec_agent.tools.http_request import HttpRequestTool
+from pen_tester_agent.tools.http_request import HttpRequestTool
 
 
 @pytest.fixture

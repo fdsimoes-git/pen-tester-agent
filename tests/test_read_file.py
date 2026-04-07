@@ -1,6 +1,6 @@
 import pytest
 
-from sec_agent.tools.read_file import ReadFileTool
+from pen_tester_agent.tools.read_file import ReadFileTool
 
 
 @pytest.fixture

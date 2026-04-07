@@ -520,8 +520,8 @@ def export_model(config: TrainingConfig):
     print()
     print("To convert to GGUF for Ollama:")
     print(f"  1. python llama.cpp/convert_hf_to_gguf.py {fused_path}"
-          " --outfile sec-agent.gguf")
-    print("  2. ollama create sec-agent-finetuned -f Modelfile")
+          " --outfile pen-tester-agent.gguf")
+    print("  2. ollama create pen-tester-agent-finetuned -f Modelfile")
     print()
     print("Modelfile contents:")
-    print("  FROM ./sec-agent.gguf")
+    print("  FROM ./pen-tester-agent.gguf")

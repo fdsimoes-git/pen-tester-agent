@@ -1,4 +1,4 @@
-from sec_agent.executor import ask_tool_approval
+from pen_tester_agent.executor import ask_tool_approval
 
 
 class TestAskToolApproval:

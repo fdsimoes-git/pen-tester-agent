@@ -1,6 +1,6 @@
 """Tests for training configuration."""
 
-from sec_agent.training.config import TrainingConfig
+from pen_tester_agent.training.config import TrainingConfig
 
 
 class TestTrainingConfig:

@@ -1,7 +1,7 @@
 [project]
-name = "sec-agent"
+name = "pen-tester-agent"
 version = "0.1.0"
-description = "A security assistant agent powered by local LLMs via Ollama"
+description = "A penetration testing agent powered by local LLMs via Ollama"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -10,8 +10,8 @@ dependencies = [
 ]
 
 [project.scripts]
-sec-agent = "sec_agent.cli:main"
-sec-agent-train = "sec_agent.training.cli:main"
+pen-tester-agent = "pen_tester_agent.cli:main"
+pen-tester-agent-train = "pen_tester_agent.training.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.10.0,<0.11.0"]

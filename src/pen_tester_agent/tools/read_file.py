@@ -10,8 +10,9 @@ class ReadFileTool(Tool):
 
     name = "read_file"
     description = (
-        "Read and return the contents of a file. Useful for inspecting "
-        "config files, source code, logs, and other text files."
+        "Read and return the contents of a file. Useful for analyzing "
+        "configuration files for misconfigurations, reviewing logs for "
+        "attack signatures, examining system files, and reading scan output."
     )
     parameters = {
         "path": {

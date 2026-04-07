@@ -1,7 +1,7 @@
-"""Security task dataset generation for GRPO training."""
+"""Penetration testing task dataset generation for GRPO training."""
 
-from sec_agent.prompts import build_system_prompt
-from sec_agent.tools import default_registry
+from pen_tester_agent.prompts import build_system_prompt
+from pen_tester_agent.tools import default_registry
 
 # Diverse penetration testing / security tasks for training.
 SECURITY_TASKS = [
@@ -83,13 +83,20 @@ SECURITY_TASKS = [
     "Enumerate SNMP community strings on 10.0.0.1 using snmpwalk.",
     "Test for shellshock vulnerability on http://10.0.0.1/cgi-bin/test.cgi.",
 
-    # --- Reporting ---
+    # --- CVE / Vulnerability Search ---
+    "Search for known CVEs affecting Apache 2.4.49.",
+    "Look up CVE-2021-44228 to understand the Log4Shell vulnerability.",
+    "Find known vulnerabilities for OpenSSH 8.2.",
+    "Search for CVEs related to Microsoft Exchange ProxyShell.",
+    "Look up exploits for the version of nginx discovered on the target.",
+
+    # --- Documentation / Reporting ---
     "Write a summary report of the scan findings to report.txt.",
     "Create a vulnerability report documenting the SQL injection found on the login page.",
     "Save the nmap scan results to a structured report file.",
     "Write a penetration test executive summary to executive_summary.txt.",
 
-    # --- General Security Tasks ---
+    # --- Enumeration / Post-Exploitation ---
     "Check which ports are currently listening on this machine.",
     "Display the current network interfaces and their IP addresses.",
     "Show all active network connections and the processes using them.",
@@ -110,7 +117,7 @@ def _build_system_context() -> str:
 
 
 def build_dataset(size: int = 500) -> list[dict]:
-    """Build a list of security task prompts for GRPO training.
+    """Build a list of penetration testing task prompts for GRPO training.
 
     Each item contains the full conversation prompt (system + user)
     so the model learns the exact protocol used at inference time.

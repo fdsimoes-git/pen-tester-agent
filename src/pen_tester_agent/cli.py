@@ -1,4 +1,4 @@
-"""Command-line interface for sec-agent."""
+"""Command-line interface for pen-tester-agent."""
 
 import argparse
 
@@ -10,8 +10,8 @@ from .tools import default_registry
 def main() -> None:
     """Parse arguments and start the agent loop."""
     parser = argparse.ArgumentParser(
-        prog="sec-agent",
-        description="Security assistant agent powered by local LLMs via Ollama",
+        prog="pen-tester-agent",
+        description="Penetration testing agent powered by local LLMs via Ollama",
     )
     parser.add_argument(
         "task", nargs="?", default=None,
@@ -37,7 +37,7 @@ def main() -> None:
     if args.task:
         task = args.task
     else:
-        print("=== sec-agent — Security Assistant ===\n")
+        print("=== pen-tester-agent — Penetration Testing Assistant ===\n")
         task = input("What do you want to do? ").strip()
         if not task:
             print("No task provided. Exiting.")

@@ -1,4 +1,4 @@
-"""GRPO reward functions for security agent fine-tuning.
+"""GRPO reward functions for penetration testing agent fine-tuning.
 
 Each reward function follows the TRL GRPO signature:
     (completions, **kwargs) -> list[float]
@@ -10,9 +10,9 @@ a single assistant message dict with a "content" key.
 import json
 import re
 
-from sec_agent.prompts import ACTION_PATTERN
+from pen_tester_agent.prompts import ACTION_PATTERN
 
-VALID_TOOLS = {"bash", "read_file", "write_file", "http_request", "math", "done"}
+VALID_TOOLS = {"bash", "read_file", "write_file", "http_request", "cve_search", "done"}
 
 # Security tools we expect to see in bash commands.
 SECURITY_TOOLS = {
@@ -74,8 +74,9 @@ TASK_TOOL_MAP = {
     "api": "http_request",
     "request": "http_request",
     "fetch": "http_request",
-    "calculate": "math",
-    "compute": "math",
+    "cve": "cve_search",
+    "vulnerability search": "cve_search",
+    "exploit search": "cve_search",
 }
 
 
@@ -211,7 +212,7 @@ def command_quality_reward(completions, **kwargs) -> list[float]:
 def explanation_reward(completions, **kwargs) -> list[float]:
     """Reward for including an explanation before the ACTION call.
 
-    The sec-agent system prompt requires a brief explanation before each
+    The pen-tester-agent system prompt requires a brief explanation before each
     ACTION line.
 
     +1.0  text present before the ACTION line

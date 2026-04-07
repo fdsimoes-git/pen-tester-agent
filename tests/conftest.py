@@ -1,7 +1,7 @@
 import pytest
 
-from sec_agent.tools import default_registry
-from sec_agent.tools.base import ToolRegistry
+from pen_tester_agent.tools import default_registry
+from pen_tester_agent.tools.base import ToolRegistry
 
 
 @pytest.fixture

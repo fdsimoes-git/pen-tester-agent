@@ -9,7 +9,7 @@ from .trainer import run_training
 def main():
     """Run the MLX GRPO fine-tuning pipeline from the command line."""
     parser = argparse.ArgumentParser(
-        description="Fine-tune a small LLM for security agent tasks using GRPO on Apple Silicon.",
+        description="Fine-tune a small LLM for penetration testing agent tasks using GRPO on Apple Silicon.",
     )
     parser.add_argument(
         "--model",

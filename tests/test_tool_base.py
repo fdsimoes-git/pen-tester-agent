@@ -1,4 +1,4 @@
-from sec_agent.tools.base import Tool, ToolRegistry, ToolResult
+from pen_tester_agent.tools.base import Tool, ToolRegistry, ToolResult
 
 
 class DummyTool(Tool):

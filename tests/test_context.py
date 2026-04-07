@@ -1,4 +1,4 @@
-from sec_agent.context import ContextManager, estimate_tokens, truncate_output
+from pen_tester_agent.context import ContextManager, estimate_tokens, truncate_output
 
 
 class TestEstimateTokens:

@@ -16,8 +16,9 @@ class BashTool(Tool):
     name = "bash"
     description = (
         "Run a shell command and return its output. "
-        "Use for system commands, security tools "
-        "(nmap, curl, dig, etc.), and general CLI operations."
+        "Use for penetration testing tools (nmap, nikto, gobuster, sqlmap, "
+        "hydra, etc.), OSINT tools (theHarvester, recon-ng, whois), "
+        "enumeration, and system commands."
     )
     parameters = {
         "command": {

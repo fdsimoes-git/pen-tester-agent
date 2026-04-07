@@ -1,6 +1,6 @@
 """Tests for dataset generation."""
 
-from sec_agent.training.datasets import SECURITY_TASKS, _build_system_context, build_dataset
+from pen_tester_agent.training.datasets import SECURITY_TASKS, _build_system_context, build_dataset
 
 
 class TestSecurityTasks:

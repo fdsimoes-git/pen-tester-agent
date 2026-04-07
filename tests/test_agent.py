@@ -1,8 +1,8 @@
 import json
 
-from sec_agent.agent import agent_loop
-from sec_agent.providers.base import ModelProvider
-from sec_agent.tools import default_registry
+from pen_tester_agent.agent import agent_loop
+from pen_tester_agent.providers.base import ModelProvider
+from pen_tester_agent.tools import default_registry
 
 
 def done_action(summary: str) -> str:

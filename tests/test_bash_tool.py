@@ -1,6 +1,6 @@
 import pytest
 
-from sec_agent.tools.bash_tool import BashTool
+from pen_tester_agent.tools.bash_tool import BashTool
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 """Tests for GRPO reward functions."""
 
-from sec_agent.training.rewards import (
+from pen_tester_agent.training.rewards import (
     _extract_action,
     command_quality_reward,
     explanation_reward,
@@ -98,7 +98,7 @@ class TestToolSelectionReward:
 
     def test_wrong_tool(self):
         completions = _wrap(
-            'ACTION: {"tool": "math", "args": {"operation": "add", "a": 1, "b": 2}}'
+            'ACTION: {"tool": "write_file", "args": {"path": "x.txt", "content": "hi"}}'
         )
         prompts = [[{"role": "user", "content": "Scan the target for open ports"}]]
         scores = tool_selection_reward(completions, prompts=prompts)

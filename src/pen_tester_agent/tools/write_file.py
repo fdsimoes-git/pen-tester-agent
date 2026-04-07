@@ -11,8 +11,8 @@ class WriteFileTool(Tool):
     name = "write_file"
     description = (
         "Write content to a file. Creates the file if it doesn't exist, "
-        "overwrites if it does. Useful for saving reports, creating scripts, "
-        "or modifying configurations."
+        "overwrites if it does. Useful for saving penetration test reports, "
+        "documenting findings, and writing scan configurations."
     )
     parameters = {
         "path": {

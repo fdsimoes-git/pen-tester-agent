@@ -12,9 +12,9 @@ class HttpRequestTool(Tool):
 
     name = "http_request"
     description = (
-        "Send an HTTP request and return the response. Useful for testing "
-        "web endpoints, APIs, checking if services are up, "
-        "and fetching web content."
+        "Send an HTTP request and return the response. Useful for probing "
+        "web applications, testing APIs for vulnerabilities, checking "
+        "HTTP security headers, and fingerprinting web services."
     )
     parameters = {
         "method": {

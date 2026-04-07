@@ -4,7 +4,7 @@
 class TestDefaultRegistry:
     def test_all_builtin_tools_registered(self, registry):
         names = {t.name for t in registry.list_tools()}
-        assert names == {"bash", "read_file", "write_file", "http_request", "math", "done"}
+        assert names == {"bash", "read_file", "write_file", "http_request", "cve_search", "done"}
 
     def test_all_tools_have_required_attrs(self, registry):
         for tool in registry.list_tools():

@@ -1,8 +1,8 @@
 import json
 
-from sec_agent.prompts import ACTION_PATTERN, build_system_prompt
-from sec_agent.tools import default_registry
-from sec_agent.tools.base import ToolRegistry
+from pen_tester_agent.prompts import ACTION_PATTERN, build_system_prompt
+from pen_tester_agent.tools import default_registry
+from pen_tester_agent.tools.base import ToolRegistry
 
 
 class TestPatterns:
@@ -50,6 +50,7 @@ class TestBuildSystemPrompt:
         assert "read_file" in prompt
         assert "write_file" in prompt
         assert "http_request" in prompt
+        assert "cve_search" in prompt
         assert "done" in prompt
 
     def test_contains_action_format(self):

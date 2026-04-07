@@ -1,4 +1,4 @@
-from sec_agent.tools.done import DoneTool
+from pen_tester_agent.tools.done import DoneTool
 
 
 class TestDoneTool:

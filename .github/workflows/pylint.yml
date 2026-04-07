@@ -21,4 +21,4 @@ jobs:
         pip install -e .
     - name: Analysing the code with pylint
       run: |
-        python -m pylint -v src/sec_agent/ --output-format=colorized 2>&1 | tee pylint.log
+        python -m pylint -v src/pen_tester_agent/ --output-format=colorized 2>&1 | tee pylint.log
