@@ -22,9 +22,9 @@ A penetration testing agent powered by local LLMs via [Ollama](https://ollama.co
 ## Prerequisites
 
 - [Ollama](https://ollama.com) installed and running
-- A model pulled (default: `qwen2.5-coder:7b`):
+- A model pulled (default: `qwen2.5-coder:3b`):
   ```
-  ollama pull qwen2.5-coder:7b
+  ollama pull qwen2.5-coder:3b
   ```
 - [uv](https://docs.astral.sh/uv/) (for running/developing)
 

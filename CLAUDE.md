@@ -33,7 +33,7 @@ Package manager is `uv`. Python 3.11+.
 
 **Agent loop** (`agent.py`): Orchestrates the cycle of LLM reasoning → ACTION JSON extraction → user approval → tool execution → result feedback. The LLM responds with free-text reasoning followed by `ACTION: {"tool": "...", "args": {...}}` which is parsed via regex.
 
-**Provider abstraction** (`providers/`): `ModelProvider` ABC decouples the agent from LLM backends. Currently only `OllamaProvider` (default model: `qwen2.5-coder:7b`). Adding a new provider means implementing a single `chat(messages) -> str` method.
+**Provider abstraction** (`providers/`): `ModelProvider` ABC decouples the agent from LLM backends. Currently only `OllamaProvider` (default model: `qwen2.5-coder:3b`). Adding a new provider means implementing a single `chat(messages) -> str` method.
 
 **Tool system** (`tools/`): Each tool is a `Tool` subclass with `name`, `description`, `parameters` (JSON Schema), and `execute(**kwargs) -> ToolResult`. `ToolRegistry` collects tools and auto-generates the LLM system prompt schema. Tools: `bash`, `read_file`, `write_file`, `http_request`, `cve_search`, `done`. Most have `requires_approval=True`.
 

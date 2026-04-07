@@ -18,8 +18,8 @@ def main() -> None:
         help="Task to perform (interactive if omitted)",
     )
     parser.add_argument(
-        "--model", default="qwen2.5-coder:7b",
-        help="Ollama model to use (default: qwen2.5-coder:7b)",
+        "--model", default="qwen2.5-coder:3b",
+        help="Ollama model to use (default: qwen2.5-coder:3b)",
     )
     parser.add_argument(
         "--max-iterations", type=int, default=15,

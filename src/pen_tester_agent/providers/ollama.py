@@ -8,7 +8,7 @@ from .base import ModelProvider
 class OllamaProvider(ModelProvider):  # pylint: disable=too-few-public-methods
     """Ollama-backed LLM provider."""
 
-    def __init__(self, model: str = "qwen2.5-coder:7b"):
+    def __init__(self, model: str = "qwen2.5-coder:3b"):
         self.model = model
 
     def chat(self, messages: list[dict]) -> str:
