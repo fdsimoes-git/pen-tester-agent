@@ -31,7 +31,7 @@ Package manager is `uv`. Python 3.11+.
 
 ## Architecture
 
-**Agent loop** (`agent.py`): Orchestrates the cycle of LLM reasoning → ACTION JSON extraction → user approval → tool execution → result feedback. The LLM responds with free-text reasoning followed by `ACTION: {"tool": "...", "args": {...}}` which is parsed via `find_action()` (brace-depth JSON extractor that handles nested objects, markdown code blocks, and multiple ACTION blocks). Bash commands stream output live via `_execute_bash_streaming()` using `select`-based polling. Non-bash tools run with a spinner. LLM calls also show a spinner. Tool timeout is 120s with partial output capture on expiry.
+**Agent loop** (`agent.py`): Orchestrates the cycle of LLM reasoning → ACTION JSON extraction → user approval → tool execution → result feedback. The LLM responds with free-text reasoning followed by `ACTION: {"tool": "...", "args": {...}}` which is parsed via `find_action()` (brace-depth JSON extractor that handles nested objects, markdown code blocks, and multiple ACTION blocks). Bash commands stream output live via `_execute_bash_streaming()` using `select`-based polling. Non-bash tools run with a spinner. LLM calls also show a spinner. Tool timeout is 60s with partial output capture on expiry.
 
 **UI layer** (`ui.py`): All terminal output goes through `rich` (panels, markdown rendering, themed colors). Interactive menus use `simple-term-menu` for arrow-key navigation. Falls back to numbered input in non-TTY environments (tests). Every user interaction point offers quit and generate-report options.
 

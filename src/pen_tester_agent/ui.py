@@ -71,7 +71,7 @@ def _arrow_menu(options, title=None):
     if title:
         console.print(f"[bold]{title}[/]")
     for i, opt in enumerate(options):
-        console.print(f"  [{i}] {opt.strip()}")
+        console.print(f"  [{i}] {opt.strip()}", markup=False)
     choice = input("").strip()
     try:
         idx = int(choice)
@@ -175,7 +175,11 @@ def spinner_tool(name):
 
 def stream_line(line):
     """Print a single line of streamed tool output."""
-    console.print(f"[dim]  │[/] {line}", end="", highlight=False)
+    console.print(
+        Text.assemble(("  │ ", "dim"), line),
+        end="",
+        highlight=False,
+    )
 
 
 def show_tool_result(output, success):
@@ -183,7 +187,7 @@ def show_tool_result(output, success):
     style = "green" if success else "red"
     title = "✔ Result" if success else "✖ Result"
     console.print(
-        Panel(output, title=title, border_style=style, padding=(0, 1))
+        Panel(Text(str(output)), title=title, border_style=style, padding=(0, 1))
     )
 
 
@@ -268,7 +272,8 @@ def prompt_approval():
 
 def show_current_args(args):
     """Display current args for editing."""
-    console.print(f"[info]Current args:[/] {json.dumps(args, indent=2)}")
+    console.print("[info]Current args:[/]")
+    console.print(json.dumps(args, indent=2), markup=False)
 
 
 def prompt_edit_args():
