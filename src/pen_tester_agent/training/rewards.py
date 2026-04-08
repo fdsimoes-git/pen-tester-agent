@@ -10,7 +10,7 @@ a single assistant message dict with a "content" key.
 import json
 import re
 
-from pen_tester_agent.prompts import ACTION_PATTERN
+from pen_tester_agent.prompts import find_action
 
 VALID_TOOLS = {"bash", "read_file", "write_file", "http_request", "cve_search", "done"}
 
@@ -82,7 +82,7 @@ TASK_TOOL_MAP = {
 
 def _extract_action(text: str) -> dict | None:
     """Extract the ACTION JSON from a completion text."""
-    match = ACTION_PATTERN.search(text)
+    match = find_action(text)
     if not match:
         return None
     try:
@@ -221,12 +221,12 @@ def explanation_reward(completions, **kwargs) -> list[float]:
     scores = []
     for completion in completions:
         response = completion[0]["content"]
-        match = ACTION_PATTERN.search(response)
+        match = find_action(response)
         if match is None:
             scores.append(0.0)
             continue
 
-        text_before = response[:match.start()].strip()
+        text_before = response[:match.start].strip()
         if len(text_before) > 10:
             scores.append(1.0)
         else:

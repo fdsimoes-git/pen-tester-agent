@@ -44,16 +44,19 @@ pip install git+https://github.com/fdsimoes-git/pen-tester-agent.git
 
 ```bash
 # Interactive mode — prompts you for a task
-uv run pen-tester-agent
+pen-tester-agent
 
 # Pass a task directly
-uv run pen-tester-agent "scan open ports on 192.168.1.1"
+pen-tester-agent "scan open ports on 192.168.1.1"
 
 # Use a different model
-uv run pen-tester-agent --model llama3.1:8b "review nginx access.log for suspicious requests"
+pen-tester-agent --model llama3.1:8b "review nginx access.log for suspicious requests"
 
 # Limit iterations
-uv run pen-tester-agent --max-iterations 5 "enumerate subdomains of example.com"
+pen-tester-agent --max-iterations 5 "enumerate subdomains of example.com"
+
+# Running from source (development)
+uv run pen-tester-agent
 ```
 
 ## Interactive CLI

@@ -1,6 +1,7 @@
 """Terminal UI components for pen-tester-agent."""
 
 import json
+import os
 import sys
 
 from rich.console import Console
@@ -48,9 +49,11 @@ _MENU_STYLE = {
 
 
 def _has_tty():
-    """Check if a real terminal is available."""
+    """Check if a real terminal is available for interactive menus."""
+    if os.environ.get("TERM") == "dumb" or os.environ.get("NO_TTY"):
+        return False
     try:
-        return sys.stdin.isatty()
+        return sys.stdin.isatty() and sys.stdout.isatty()
     except AttributeError:
         return False
 

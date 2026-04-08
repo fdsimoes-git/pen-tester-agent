@@ -1,8 +1,10 @@
 """Core agent loop that orchestrates tool calls via an LLM."""
 
 import json
+import os
 import select
 import subprocess
+import sys
 import time
 
 from .context import ContextManager
@@ -15,53 +17,96 @@ TOOL_TIMEOUT = 120
 
 
 def _execute_bash_streaming(approved_args):
-    """Execute a bash command with live-streamed output."""
+    """Execute a bash command with live-streamed output.
+
+    Uses select() + os.read() on POSIX for non-blocking streaming.
+    Falls back to communicate() on Windows where select() doesn't
+    work on pipes.
+    """
     command = approved_args.get("command", "")
     timeout = approved_args.get("timeout", TOOL_TIMEOUT)
     if not command:
         return ToolResult(output="Error: no command provided", success=False)
 
+    # Windows: select() doesn't support pipes; fall back to communicate()
+    if sys.platform == "win32":
+        try:
+            proc = subprocess.Popen(
+                command, shell=True,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            )
+            stdout, _ = proc.communicate(timeout=timeout)
+            for line in (stdout or "").splitlines(keepends=True):
+                ui.stream_line(line)
+            return ToolResult(output=stdout if stdout else "(no output)")
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+            msg = f"Command timed out after {timeout}s."
+            if stdout:
+                msg += f"\nPartial output:\n{stdout}"
+            return ToolResult(output=msg, success=False)
+        except OSError as exc:
+            return ToolResult(output=f"Error: {exc}", success=False)
+
+    # POSIX: non-blocking streaming via select() + os.read()
     lines = []
     try:
         proc = subprocess.Popen(
             command, shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         start = time.monotonic()
+        buf = b""
+        open_fds = set()
+        if proc.stdout:
+            open_fds.add(proc.stdout)
+        if proc.stderr:
+            open_fds.add(proc.stderr)
 
         while True:
             elapsed = time.monotonic() - start
             if elapsed >= timeout:
                 raise subprocess.TimeoutExpired(command, timeout)
 
-            # Use select to poll stdout/stderr without blocking
-            streams = []
-            if proc.stdout:
-                streams.append(proc.stdout)
-            if proc.stderr:
-                streams.append(proc.stderr)
-
-            if streams:
-                readable, _, _ = select.select(streams, [], [], 0.1)
+            if open_fds:
+                readable, _, _ = select.select(list(open_fds), [], [], 0.1)
             else:
                 readable = []
 
             for stream in readable:
-                line = stream.readline()
-                if line:
-                    lines.append(line)
-                    ui.stream_line(line)
+                chunk = os.read(stream.fileno(), 4096)
+                if not chunk:
+                    open_fds.discard(stream)
+                    continue
+                buf += chunk
+                while b"\n" in buf:
+                    line_bytes, buf = buf.split(b"\n", 1)
+                    decoded = (
+                        line_bytes.decode("utf-8", errors="replace") + "\n"
+                    )
+                    lines.append(decoded)
+                    ui.stream_line(decoded)
 
             if proc.poll() is not None:
-                # Process finished — drain remaining output
-                if proc.stdout:
-                    for line in proc.stdout:
-                        lines.append(line)
-                        ui.stream_line(line)
-                if proc.stderr:
-                    for line in proc.stderr:
-                        lines.append(line)
-                        ui.stream_line(line)
+                # Process exited — drain remaining pipe data
+                for stream in [proc.stdout, proc.stderr]:
+                    if stream:
+                        remaining = stream.read()
+                        if remaining:
+                            buf += remaining
+                # Flush buffer
+                while b"\n" in buf:
+                    line_bytes, buf = buf.split(b"\n", 1)
+                    decoded = (
+                        line_bytes.decode("utf-8", errors="replace") + "\n"
+                    )
+                    lines.append(decoded)
+                    ui.stream_line(decoded)
+                if buf:
+                    decoded = buf.decode("utf-8", errors="replace")
+                    lines.append(decoded)
+                    ui.stream_line(decoded)
                 break
 
         output = "".join(lines)
@@ -70,14 +115,13 @@ def _execute_bash_streaming(approved_args):
     except subprocess.TimeoutExpired:
         proc.kill()
         stdout_remaining, stderr_remaining = proc.communicate()
-        # Combine already-streamed lines with any remaining buffered output
         partial = "".join(lines)
         if stdout_remaining:
-            partial += stdout_remaining
+            partial += stdout_remaining.decode("utf-8", errors="replace")
         if stderr_remaining:
             if partial:
                 partial += "\n"
-            partial += stderr_remaining
+            partial += stderr_remaining.decode("utf-8", errors="replace")
         msg = f"Command timed out after {timeout}s."
         if partial:
             msg += f"\nPartial output:\n{partial}"
@@ -86,8 +130,12 @@ def _execute_bash_streaming(approved_args):
         return ToolResult(output=f"Error: {exc}", success=False)
 
 
-def _execute_with_timeout(tool, approved_args):
-    """Execute a tool with appropriate UI feedback."""
+def _execute_tool(tool, approved_args):
+    """Execute a tool with appropriate UI feedback.
+
+    Bash commands are streamed live with timeout enforcement.
+    Non-bash tools run with a spinner but no timeout.
+    """
     if tool.name == "bash":
         return _execute_bash_streaming(approved_args)
     with ui.spinner_tool(tool.name):
@@ -137,9 +185,7 @@ def _generate_report(ctx, provider, registry, max_context_tokens):
     report_text = content
     action_match = find_action(content)
     if action_match:
-        idx = content.upper().find("ACTION")
-        if idx >= 0:
-            report_text = content[:idx].strip() if idx > 0 else ""
+        report_text = content[:action_match.start].strip()
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(report_text)
@@ -193,7 +239,7 @@ def _handle_action(content, action_match, ctx, registry, provider,
         return False
 
     ui.show_tool_executing(tool_name)
-    result = _execute_with_timeout(tool, approved_args)
+    result = _execute_tool(tool, approved_args)
 
     if result.terminates:
         ui.show_success(f"Done: {result.output}")
@@ -238,8 +284,7 @@ def agent_loop(
 
         if action_match:
             # Show only the reasoning, omit the ACTION block
-            idx = content.upper().find("ACTION")
-            reasoning = content[:idx].rstrip() if idx > 0 else ""
+            reasoning = content[:action_match.start].rstrip()
             if reasoning:
                 ui.show_assistant(reasoning)
         else:

@@ -53,33 +53,34 @@ def find_action(content):
     """
     # Find "ACTION" anchored to start of line with word boundary
     action_re = re.compile(r"^\s*ACTION\b:?\s*", re.IGNORECASE | re.MULTILINE)
-    match = action_re.search(content)
-    if not match:
-        return None
 
-    after = content[match.end():]
+    for match in action_re.finditer(content):
+        after = content[match.end():]
 
-    # Strip optional markdown code fence (```json or ```)
-    fence_re = re.compile(r"^```(?:json)?\s*\n?")
-    after = fence_re.sub("", after)
+        # Strip optional markdown code fence (```json or ```)
+        fence_re = re.compile(r"^```(?:json)?\s*\n?")
+        after = fence_re.sub("", after)
 
-    # Find the first '{' in the remaining text
-    brace_pos = after.find("{")
-    if brace_pos == -1:
-        return None
+        # Find the first '{' in the remaining text
+        brace_pos = after.find("{")
+        if brace_pos == -1:
+            continue
 
-    json_str = _extract_json_object(after, brace_pos)
-    if json_str is None:
-        return None
+        json_str = _extract_json_object(after, brace_pos)
+        if json_str is None:
+            continue
 
-    return _ActionMatch(json_str)
+        return _ActionMatch(json_str, start=match.start())
+
+    return None
 
 
 class _ActionMatch:
     """Lightweight match-like wrapper for extracted ACTION JSON."""
 
-    def __init__(self, json_str):
+    def __init__(self, json_str, start):
         self._json = json_str
+        self.start = start
 
     def group(self, n):  # pylint: disable=unused-argument
         """Return the captured JSON string."""
