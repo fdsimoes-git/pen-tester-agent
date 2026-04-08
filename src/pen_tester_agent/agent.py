@@ -13,7 +13,7 @@ from .providers.base import ModelProvider
 from .tools.base import ToolRegistry, ToolResult
 from . import ui
 
-TOOL_TIMEOUT = 120
+TOOL_TIMEOUT = 60
 
 
 def _execute_bash_streaming(approved_args):
@@ -50,51 +50,44 @@ def _execute_bash_streaming(approved_args):
             return ToolResult(output=f"Error: {exc}", success=False)
 
     # POSIX: non-blocking streaming via select() + os.read()
+    # Merge stderr into stdout to avoid interleaved/corrupted lines
     lines = []
     try:
         proc = subprocess.Popen(
             command, shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
         start = time.monotonic()
         buf = b""
-        open_fds = set()
-        if proc.stdout:
-            open_fds.add(proc.stdout)
-        if proc.stderr:
-            open_fds.add(proc.stderr)
 
         while True:
             elapsed = time.monotonic() - start
             if elapsed >= timeout:
                 raise subprocess.TimeoutExpired(command, timeout)
 
-            if open_fds:
-                readable, _, _ = select.select(list(open_fds), [], [], 0.1)
-            else:
-                readable = []
+            readable, _, _ = select.select(
+                [proc.stdout] if proc.stdout else [], [], [], 0.1,
+            )
 
             for stream in readable:
                 chunk = os.read(stream.fileno(), 4096)
-                if not chunk:
-                    open_fds.discard(stream)
-                    continue
-                buf += chunk
-                while b"\n" in buf:
-                    line_bytes, buf = buf.split(b"\n", 1)
-                    decoded = (
-                        line_bytes.decode("utf-8", errors="replace") + "\n"
-                    )
-                    lines.append(decoded)
-                    ui.stream_line(decoded)
+                if chunk:
+                    buf += chunk
+                    while b"\n" in buf:
+                        line_bytes, buf = buf.split(b"\n", 1)
+                        decoded = (
+                            line_bytes.decode("utf-8", errors="replace")
+                            + "\n"
+                        )
+                        lines.append(decoded)
+                        ui.stream_line(decoded)
 
             if proc.poll() is not None:
                 # Process exited — drain remaining pipe data
-                for stream in [proc.stdout, proc.stderr]:
-                    if stream:
-                        remaining = stream.read()
-                        if remaining:
-                            buf += remaining
+                if proc.stdout:
+                    remaining = proc.stdout.read()
+                    if remaining:
+                        buf += remaining
                 # Flush buffer
                 while b"\n" in buf:
                     line_bytes, buf = buf.split(b"\n", 1)
@@ -114,14 +107,10 @@ def _execute_bash_streaming(approved_args):
 
     except subprocess.TimeoutExpired:
         proc.kill()
-        stdout_remaining, stderr_remaining = proc.communicate()
+        stdout_remaining, _ = proc.communicate()
         partial = "".join(lines)
         if stdout_remaining:
             partial += stdout_remaining.decode("utf-8", errors="replace")
-        if stderr_remaining:
-            if partial:
-                partial += "\n"
-            partial += stderr_remaining.decode("utf-8", errors="replace")
         msg = f"Command timed out after {timeout}s."
         if partial:
             msg += f"\nPartial output:\n{partial}"
@@ -151,7 +140,7 @@ def _generate_report(ctx, provider, registry, max_context_tokens):
         history += f"[{msg['role']}]: {msg['content']}\n\n"
 
     # Cap history to fit within context budget (reserve ~2000 chars for prompt)
-    max_history_chars = max_context_tokens * 4 - 2000
+    max_history_chars = max(0, max_context_tokens * 4 - 2000)
     if len(history) > max_history_chars:
         history = history[:max_history_chars] + "\n\n[... history truncated ...]"
 
@@ -214,6 +203,15 @@ def _handle_action(content, action_match, ctx, registry, provider,
     tool_name = action.get("tool", "")
     args = action.get("args", {})
 
+    if not isinstance(tool_name, str) or not isinstance(args, dict):
+        ui.show_warning("Invalid ACTION format. Asking LLM to retry.")
+        ctx.add_assistant(content)
+        ctx.add_user(
+            "Your ACTION had an invalid format. 'tool' must be a string "
+            "and 'args' must be a JSON object. Please try again."
+        )
+        return False
+
     tool = registry.get(tool_name)
     if tool is None:
         available = ", ".join(t.name for t in registry.list_tools())
@@ -243,13 +241,14 @@ def _handle_action(content, action_match, ctx, registry, provider,
 
     if result.terminates:
         ui.show_success(f"Done: {result.output}")
+        ctx.add_assistant(content)
+        ctx.add_tool_result(tool_name, result.output)
         follow_up = ui.prompt_followup()
         if not follow_up:
             return True
         if follow_up == "__report__":
             _generate_report(ctx, provider, registry, max_context_tokens)
             return True
-        ctx.add_assistant(content)
         ctx.add_user(follow_up)
     else:
         # Bash output was already streamed live — skip the result panel
@@ -295,6 +294,7 @@ def agent_loop(
                               provider, max_iterations, max_context_tokens):
                 return
         else:
+            ctx.add_assistant(content)
             follow_up = ui.prompt_user_input()
             if not follow_up:
                 return
@@ -303,7 +303,6 @@ def agent_loop(
                     ctx, provider, registry, max_context_tokens,
                 )
                 return
-            ctx.add_assistant(content)
             ctx.add_user(follow_up)
 
     ui.show_warning("Reached maximum iterations. Stopping.")
