@@ -315,7 +315,7 @@ def show_tool_approval_flow(tool_name, args):
                     return new_args, True
                 except json.JSONDecodeError:
                     show_error(
-                        "Invalid JSON. Try again or press Enter to cancel."
+                        "Invalid JSON. Select Edit again to retry."
                     )
             else:
                 return None, False
