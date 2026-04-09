@@ -145,22 +145,22 @@ def show_assistant(content):
 
 def show_warning(msg):
     """Display a warning message."""
-    console.print(f"[warning]⚠  {msg}[/]")
+    console.print(Text(f"⚠  {msg}", style="warning"))
 
 
 def show_error(msg):
     """Display an error message."""
-    console.print(f"[error]✖  {msg}[/]")
+    console.print(Text(f"✖  {msg}", style="error"))
 
 
 def show_success(msg):
     """Display a success message."""
-    console.print(f"[success]✔  {msg}[/]")
+    console.print(Text(f"✔  {msg}", style="success"))
 
 
 def show_tool_executing(name):
     """Display a tool execution indicator."""
-    console.print(f"[tool]⚙  Executing: {name}[/]")
+    console.print(Text(f"⚙  Executing: {name}", style="tool"))
 
 
 def spinner_llm():
