@@ -286,7 +286,7 @@ def prompt_edit_args():
 
 def show_info(msg):
     """Display an informational message."""
-    console.print(f"[info]{msg}[/]")
+    console.print(Text(str(msg), style="info"))
 
 
 def show_tool_approval_flow(tool_name, args):

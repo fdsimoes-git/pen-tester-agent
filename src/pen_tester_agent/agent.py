@@ -107,6 +107,11 @@ def _execute_bash_streaming(approved_args):
                             + "\n"
                         )
                         _capture(decoded)
+                    # Flush partial line if buf grows too large (no newlines)
+                    if len(buf) > 65536:
+                        decoded = buf.decode("utf-8", errors="replace")
+                        _capture(decoded)
+                        buf = b""
 
             if proc.poll() is not None:
                 # Process exited — drain remaining pipe data
