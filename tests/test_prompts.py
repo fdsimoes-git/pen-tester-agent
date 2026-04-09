@@ -1,6 +1,6 @@
 import json
 
-from pen_tester_agent.prompts import ACTION_PATTERN, find_action, build_system_prompt
+from pen_tester_agent.prompts import find_action, build_system_prompt
 from pen_tester_agent.tools import default_registry
 from pen_tester_agent.tools.base import ToolRegistry
 
@@ -8,7 +8,7 @@ from pen_tester_agent.tools.base import ToolRegistry
 class TestPatterns:
     def test_action_pattern_simple(self):
         text = 'ACTION: {"tool": "bash", "args": {"command": "ls"}}'
-        m = ACTION_PATTERN.search(text)
+        m = find_action(text)
         assert m is not None
         parsed = json.loads(m.group(1))
         assert parsed["tool"] == "bash"
@@ -16,19 +16,19 @@ class TestPatterns:
 
     def test_action_pattern_with_preceding_text(self):
         text = 'Let me check that.\n\nACTION: {"tool": "read_file", "args": {"path": "/etc/hosts"}}'
-        m = ACTION_PATTERN.search(text)
+        m = find_action(text)
         assert m is not None
         parsed = json.loads(m.group(1))
         assert parsed["tool"] == "read_file"
 
     def test_action_pattern_no_match(self):
         text = "I will just explain things."
-        m = ACTION_PATTERN.search(text)
+        m = find_action(text)
         assert m is None
 
     def test_action_pattern_done_tool(self):
         text = 'ACTION: {"tool": "done", "args": {"summary": "completed the port scan"}}'
-        m = ACTION_PATTERN.search(text)
+        m = find_action(text)
         assert m is not None
         parsed = json.loads(m.group(1))
         assert parsed["tool"] == "done"
@@ -36,7 +36,7 @@ class TestPatterns:
 
     def test_action_pattern_nested_json(self):
         text = 'ACTION: {"tool": "http_request", "args": {"url": "https://example.com", "headers": {"Accept": "application/json"}}}'
-        m = ACTION_PATTERN.search(text)
+        m = find_action(text)
         assert m is not None
         parsed = json.loads(m.group(1))
         assert parsed["args"]["headers"]["Accept"] == "application/json"

@@ -162,7 +162,14 @@ def _generate_report(ctx, provider, registry, max_context_tokens):
     # Cap history to fit within context budget (reserve ~2000 chars for prompt)
     max_history_chars = max(0, max_context_tokens * 4 - 2000)
     if len(history) > max_history_chars:
-        history = history[:max_history_chars] + "\n\n[... history truncated ...]"
+        truncation_notice = "\n\n[... history truncated ...]\n\n"
+        if max_history_chars <= len(truncation_notice):
+            history = truncation_notice[:max_history_chars]
+        else:
+            remaining = max_history_chars - len(truncation_notice)
+            head = remaining // 2
+            tail = remaining - head
+            history = history[:head] + truncation_notice + history[-tail:]
 
     report_task = (
         "Based on the penetration testing session below, write a professional "

@@ -5,9 +5,6 @@ import re
 from .tools.base import ToolRegistry
 
 
-ACTION_PATTERN = re.compile(r"ACTION:\s*(\{.*?\})\s*$", re.MULTILINE)
-
-
 def _extract_json_object(text, start):
     """Extract a complete JSON object from text starting at a '{'.
 
