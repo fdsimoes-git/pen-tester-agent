@@ -25,6 +25,12 @@ def _execute_bash_streaming(approved_args):
     """
     command = approved_args.get("command", "")
     timeout = approved_args.get("timeout", TOOL_TIMEOUT)
+    try:
+        timeout = int(timeout)
+        if timeout <= 0:
+            timeout = TOOL_TIMEOUT
+    except (TypeError, ValueError):
+        timeout = TOOL_TIMEOUT
     if not command:
         return ToolResult(output="Error: no command provided", success=False)
 
@@ -40,7 +46,11 @@ def _execute_bash_streaming(approved_args):
                 ui.stream_line(line)
             return ToolResult(output=stdout if stdout else "(no output)")
         except subprocess.TimeoutExpired:
-            proc.kill()
+            if proc.poll() is None:
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
             stdout, _ = proc.communicate()
             msg = f"Command timed out after {timeout}s."
             if stdout:
@@ -106,7 +116,11 @@ def _execute_bash_streaming(approved_args):
         return ToolResult(output=output if output else "(no output)")
 
     except subprocess.TimeoutExpired:
-        proc.kill()
+        if proc.poll() is None:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
         stdout_remaining, _ = proc.communicate()
         partial = "".join(lines)
         if stdout_remaining:
@@ -176,8 +190,13 @@ def _generate_report(ctx, provider, registry, max_context_tokens):
     if action_match:
         report_text = content[:action_match.start].strip()
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(report_text)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+    except OSError as exc:
+        ui.show_assistant(report_text)
+        ui.show_error(f"Could not save report to {path}: {exc}")
+        return
 
     ui.show_assistant(report_text)
     ui.show_success(f"Report saved to {path}")
