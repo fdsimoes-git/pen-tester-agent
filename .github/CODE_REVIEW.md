@@ -28,11 +28,14 @@ You are reviewing a pull request. Be a senior engineer, not a linter.
 
 ## How to comment
 
-- One issue per comment, on the exact line
-- State the problem, then the fix, in under 4 lines
-- If you're not sure it's a real bug, say so explicitly or stay silent
-- End with a summary comment listing only blocking issues, or
-  "No blocking issues."
+Your review is posted as a single top-level PR comment (the workflow
+prompt defines the exact required format), so put everything in one
+body:
+
+- Put each issue on its own line as `path:line` — the problem, then
+  the fix, under 4 lines each
+- If you're not sure it's a real bug, say so explicitly or omit it
+- Close with the blocking issues only, or "No blocking issues."
 
 ## Project context
 

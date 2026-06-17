@@ -27,11 +27,15 @@ jobs:
   review:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Comment triggers are gated on author_association so a `@claude`
-    # from a drive-by commenter can't kick off a paid review; only the
-    # repo owner / members / collaborators can re-ping.
+    # pull_request is gated to same-repo PRs: fork PRs don't get the
+    # CLAUDE_CODE_OAUTH_TOKEN secret, so they'd only ever produce noisy
+    # failed runs. Comment triggers are additionally gated on
+    # author_association so a `@claude` from a drive-by commenter can't
+    # kick off a paid review; only owner / members / collaborators can
+    # re-ping.
     if: |
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'issue_comment' &&
         github.event.issue.pull_request != null &&
         contains(github.event.comment.body, '@claude') &&
@@ -43,6 +47,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # On comment triggers checkout defaults to the base branch;
+          # pin to the PR head so file reads during a re-review see the
+          # PR's code, not main.
+          ref: ${{ github.event.pull_request.head.sha || format('refs/pull/{0}/head', github.event.issue.number) }}
 
       - uses: anthropics/claude-code-action@v1
         env:
