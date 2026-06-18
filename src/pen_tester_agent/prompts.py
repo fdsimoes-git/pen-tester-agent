@@ -91,9 +91,21 @@ class _ActionMatch:
         return self._json
 
 
-def build_system_prompt(registry: ToolRegistry) -> str:
-    """Build the system prompt dynamically from the tool registry."""
+def build_system_prompt(registry: ToolRegistry, plan_enabled: bool = False) -> str:
+    """Build the system prompt dynamically from the tool registry.
+
+    When `plan_enabled` is True, an extra rule tells the model to work from
+    the pinned numbered PLAN that the agent drafts before the loop starts.
+    """
     tool_docs = registry.schema_text()
+
+    plan_rule = (
+        "\n- A numbered PLAN for this task appears right after the task "
+        "description. Work it step by step: each turn, advance the next "
+        "pending step and name the step number you are on. If findings change "
+        "the approach, briefly revise the plan before continuing."
+        if plan_enabled else ""
+    )
 
     return f"""You are a penetration testing assistant running on the user's machine.
 You help with structured penetration testing across these domains:
@@ -130,4 +142,4 @@ Examples:
 - Choose the most appropriate tool for the task.
 - When the task is complete, use the "done" tool with a summary of what was accomplished.
 - If you need more information from the user, just ask — don't guess.
-- Be aware of the current working directory and OS context."""
+- Be aware of the current working directory and OS context.{plan_rule}"""

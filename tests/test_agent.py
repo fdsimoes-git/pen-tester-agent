@@ -119,15 +119,44 @@ class TestAgentLoop:
         assert "What IP" in out
 
     def test_max_iterations(self, monkeypatch, capsys):
-        """Agent stops at max iterations."""
+        """Agent stops at the cap and offers continue/report/quit."""
         provider = FakeProvider(["thinking..." for _ in range(10)])
         registry = default_registry()
-        # "0" = Reply, "continue" = text
-        inputs = iter(["0", "continue"] * 10)
+        # Each no-action turn: "0" = Reply, "continue" = text.
+        # After 3 turns the cap menu appears: "2" = Quit.
+        inputs = iter(["0", "continue", "0", "continue", "0", "continue", "2"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
         agent_loop("loop forever", provider, registry, max_iterations=3)
         out = capsys.readouterr().out
         assert "maximum iterations" in out.lower()
+
+    def test_max_iterations_continue(self, monkeypatch, capsys):
+        """Choosing 'continue' at the cap runs another batch of iterations."""
+        provider = FakeProvider(
+            ["thinking..."] + [done_action("finished after continue")]
+        )
+        registry = default_registry()
+        # First (and only) turn of batch 1 replies: "0" + "go on".
+        # Cap menu: "0" = Continue. Batch 2 turn 1 hits done, then "2" = Quit.
+        inputs = iter(["0", "go on", "0", "2"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+        agent_loop("keep going", provider, registry, max_iterations=1)
+        out = capsys.readouterr().out
+        assert "finished after continue" in out
+
+    def test_planning_step(self, monkeypatch, capsys):
+        """With plan=True the first response is pinned as the plan, not run."""
+        provider = FakeProvider([
+            "PLAN:\n1. Recon the target\n2. Scan open ports",
+            done_action("done planning test"),
+        ])
+        registry = default_registry()
+        # "2" = Quit on the post-done follow-up menu.
+        monkeypatch.setattr("builtins.input", lambda _: "2")
+        agent_loop("scan target", provider, registry, max_iterations=5, plan=True)
+        out = capsys.readouterr().out
+        assert "Recon" in out          # plan was displayed
+        assert "done planning test" in out
 
     def test_read_file_tool_integration(self, monkeypatch, capsys, tmp_path):
         """Agent can use the read_file tool end-to-end."""

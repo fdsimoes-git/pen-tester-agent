@@ -143,6 +143,18 @@ def show_assistant(content):
     )
 
 
+def show_plan(plan):
+    """Display the agent's upfront plan in a styled panel."""
+    console.print(
+        Panel(
+            Markdown(plan),
+            title="📋 Plan",
+            border_style="magenta",
+            padding=(0, 1),
+        )
+    )
+
+
 def show_warning(msg):
     """Display a warning message."""
     console.print(Text(f"⚠  {msg}", style="warning"))
@@ -209,6 +221,24 @@ def prompt_followup():
         return "__report__"
     console.print("[bold]Follow-up task:[/] ", end="")
     return input("").strip()
+
+
+def prompt_max_iterations():
+    """Menu shown when the iteration cap is reached.
+
+    Returns one of 'continue', 'report', or 'quit'.
+    """
+    show_warning("Reached maximum iterations.")
+    index = _arrow_menu([
+        "  Continue (run another batch of iterations)",
+        "  Generate report from this session",
+        "  Quit",
+    ], title="  Maximum iterations reached")
+    if index == 0:
+        return "continue"
+    if index == 1:
+        return "report"
+    return "quit"
 
 
 def prompt_user_input():

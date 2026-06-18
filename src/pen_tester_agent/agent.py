@@ -311,47 +311,95 @@ def _handle_action(content, action_match, ctx, registry, provider,
     return False
 
 
-def agent_loop(
+def _run_planning(task, system_prompt, provider, ctx):
+    """Draft an upfront numbered plan and pin it into the context.
+
+    The plan is generated with a one-off prompt (kept out of the running
+    conversation) and pinned via ``ctx.set_plan`` so it survives compression.
+    """
+    planning_messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": (
+            f"Task: {task}\n\n"
+            "Before using any tools, draft a concise numbered PLAN of the "
+            "penetration-testing steps needed to accomplish this task, in the "
+            "order you will carry them out. Each step should map to one or a "
+            "few tool calls. Output ONLY the numbered plan — do not run any "
+            "tools and do not include an ACTION line yet."
+        )},
+    ]
+    with ui.spinner_llm():
+        plan = provider.chat(planning_messages)
+    # Defensively drop any ACTION block the model included anyway.
+    match = find_action(plan)
+    if match:
+        plan = plan[:match.start]
+    plan = plan.strip()
+    if plan:
+        ui.show_plan(plan)
+        ctx.set_plan(plan)
+
+
+def _run_iteration(ctx, provider, registry, max_context_tokens):
+    """Run a single agent turn. Returns True if the loop should stop."""
+    with ui.spinner_llm():
+        content = provider.chat(ctx.get_messages())
+
+    action_match = find_action(content)
+
+    if action_match:
+        # Show only the reasoning, omit the ACTION block
+        reasoning = content[:action_match.start].rstrip()
+        if reasoning:
+            ui.show_assistant(reasoning)
+        return _handle_action(
+            content, action_match, ctx, registry, provider, max_context_tokens,
+        )
+
+    ui.show_assistant(content)
+    ctx.add_assistant(content)
+    follow_up = ui.prompt_user_input()
+    if not follow_up:
+        return True
+    if follow_up == "__report__":
+        _generate_report(ctx, provider, registry, max_context_tokens)
+        return True
+    ctx.add_user(follow_up)
+    return False
+
+
+def agent_loop(  # pylint: disable=too-many-arguments
     task: str,
     provider: ModelProvider,
     registry: ToolRegistry,
-    max_iterations: int = 15,
-    max_context_tokens: int = 6000,
+    *,
+    max_iterations: int = 50,
+    max_context_tokens: int = 32000,
+    plan: bool = False,
 ) -> None:
-    """Run the agent loop: propose tool calls, get approval, execute, repeat."""
-    system_prompt = build_system_prompt(registry)
+    """Run the agent loop: propose tool calls, get approval, execute, repeat.
+
+    When ``plan`` is True the agent first drafts a numbered plan (pinned in
+    context for the whole session) before acting. On reaching the iteration
+    cap the user is offered to continue, generate a report, or quit instead of
+    silently dropping the session.
+    """
+    system_prompt = build_system_prompt(registry, plan_enabled=plan)
     ctx = ContextManager(
         system_prompt, task, max_context_tokens=max_context_tokens,
     )
 
-    for _ in range(max_iterations):
-        with ui.spinner_llm():
-            content = provider.chat(ctx.get_messages())
+    if plan:
+        _run_planning(task, system_prompt, provider, ctx)
 
-        action_match = find_action(content)
-
-        if action_match:
-            # Show only the reasoning, omit the ACTION block
-            reasoning = content[:action_match.start].rstrip()
-            if reasoning:
-                ui.show_assistant(reasoning)
-        else:
-            ui.show_assistant(content)
-
-        if action_match:
-            if _handle_action(content, action_match, ctx, registry,
-                              provider, max_context_tokens):
+    while True:
+        for _ in range(max_iterations):
+            if _run_iteration(ctx, provider, registry, max_context_tokens):
                 return
-        else:
-            ctx.add_assistant(content)
-            follow_up = ui.prompt_user_input()
-            if not follow_up:
-                return
-            if follow_up == "__report__":
-                _generate_report(
-                    ctx, provider, registry, max_context_tokens,
-                )
-                return
-            ctx.add_user(follow_up)
 
-    ui.show_warning("Reached maximum iterations. Stopping.")
+        choice = ui.prompt_max_iterations()
+        if choice == "continue":
+            continue
+        if choice == "report":
+            _generate_report(ctx, provider, registry, max_context_tokens)
+        return
