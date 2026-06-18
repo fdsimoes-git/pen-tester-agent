@@ -17,6 +17,10 @@ credentials.json
 # Training outputs
 outputs/
 
+# Generated pentest reports (e.g. pentest-report.txt, <target>_vulnerability_report.txt)
+*-report.txt
+*_report.txt
+
 # OS
 .DS_Store
 ._*

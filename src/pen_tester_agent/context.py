@@ -40,6 +40,7 @@ class ContextManager:
         self.max_context_tokens = max_context_tokens
         self.max_output_chars = max_output_chars
         self.preserve_recent = preserve_recent
+        self._has_plan = False
 
     def add_assistant(self, content: str) -> None:
         """Append an assistant message."""
@@ -70,6 +71,24 @@ class ContextManager:
             "content": f"Tool '{tool_name}' output:\n{truncated}",
         })
 
+    def set_plan(self, plan: str) -> None:
+        """Pin a plan message right after the task.
+
+        The plan is protected from compression (like the system prompt and
+        original task) so the agent never loses sight of its plan across a
+        long session. Intended to be called once, before the loop starts.
+        """
+        plan_msg = {"role": "assistant", "content": f"PLAN:\n{plan}"}
+        if self._has_plan:
+            # Keep both views in sync so a re-plan doesn't leave a stale
+            # plan in the raw history used for report generation.
+            self._messages[2] = plan_msg
+            self._raw_messages[2] = plan_msg
+            return
+        self._messages.insert(2, plan_msg)
+        self._raw_messages.insert(2, plan_msg)
+        self._has_plan = True
+
     def token_estimate(self) -> int:
         """Estimate total tokens across all messages."""
         return sum(estimate_tokens(m["content"]) for m in self._messages)
@@ -95,9 +114,9 @@ class ContextManager:
         and the last `preserve_recent` messages intact. Compress everything in
         between by replacing tool output messages with short summaries.
         """
-        # Protected: system prompt + original task at the front,
-        # and the N most recent messages at the tail
-        protected_head = 2
+        # Protected: system prompt + original task at the front (plus the
+        # pinned plan when present), and the N most recent messages at the tail
+        protected_head = 3 if self._has_plan else 2
         protected_tail = min(self.preserve_recent, len(self._messages) - protected_head)
 
         if protected_head + protected_tail >= len(self._messages):

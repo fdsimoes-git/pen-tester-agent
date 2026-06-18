@@ -20,20 +20,33 @@ def main() -> None:
         help="Task to perform (interactive if omitted)",
     )
     parser.add_argument(
-        "--model", default="qwen2.5-coder:3b",
-        help="Ollama model to use (default: qwen2.5-coder:3b)",
+        "--model", default="qwen3.6:35b",
+        help="Ollama model to use (default: qwen3.6:35b)",
     )
     parser.add_argument(
-        "--max-iterations", type=int, default=15,
-        help="Max agent iterations (default: 15)",
+        "--max-iterations", type=int, default=50,
+        help="Iterations before prompting to continue/report (default: 50)",
     )
     parser.add_argument(
-        "--max-context-tokens", type=int, default=6000,
-        help="Max context token budget (default: 6000)",
+        "--max-context-tokens", type=int, default=32000,
+        help="Max context token budget for the prompt (default: 32000)",
+    )
+    parser.add_argument(
+        "--num-ctx", type=int, default=None,
+        help="Ollama context window (num_ctx). Defaults to "
+             "max-context-tokens + 8192 headroom for the response.",
+    )
+    parser.add_argument(
+        "--no-plan", action="store_true",
+        help="Skip the upfront planning step.",
     )
     args = parser.parse_args()
 
-    provider = OllamaProvider(model=args.model)
+    num_ctx = (
+        args.num_ctx if args.num_ctx is not None
+        else args.max_context_tokens + 8192
+    )
+    provider = OllamaProvider(model=args.model, num_ctx=num_ctx)
     registry = default_registry()
 
     if args.task:
@@ -41,6 +54,7 @@ def main() -> None:
             args.task, provider, registry,
             max_iterations=args.max_iterations,
             max_context_tokens=args.max_context_tokens,
+            plan=not args.no_plan,
         )
         return
 
@@ -62,5 +76,5 @@ def main() -> None:
                 task, provider, registry,
                 max_iterations=args.max_iterations,
                 max_context_tokens=args.max_context_tokens,
+                plan=not args.no_plan,
             )
-

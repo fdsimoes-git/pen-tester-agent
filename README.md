@@ -35,9 +35,9 @@ pip install git+https://github.com/fdsimoes-git/pen-tester-agent.git
 ## Prerequisites
 
 - [Ollama](https://ollama.com) installed and running
-- A model pulled (default: `qwen2.5-coder:3b`):
+- A model pulled (default: `qwen3.6:35b`):
   ```
-  ollama pull qwen2.5-coder:3b
+  ollama pull qwen3.6:35b
   ```
 
 ## Usage
@@ -73,11 +73,12 @@ At any interaction point during a session you can choose to generate a report fr
 ## How it works
 
 1. You describe a task in natural language.
-2. The agent (running locally via Ollama) reasons about the task and proposes a tool call (shell command, CVE lookup, file read/write, etc.).
-3. You review and approve/edit/reject the action via arrow-key menu.
-4. Bash output streams live to the terminal; the full output is fed back to the agent.
-5. Repeat until the task is complete or you stop.
-6. Generate a structured pentest report from the session at any time.
+2. The agent first drafts a numbered **plan** for the task, which stays pinned in context for the whole session (skip with `--no-plan`).
+3. The agent (running locally via Ollama) reasons about the next step and proposes a tool call (shell command, CVE lookup, file read/write, etc.).
+4. You review and approve/edit/reject the action via arrow-key menu.
+5. Bash output streams live to the terminal; the full output is fed back to the agent.
+6. Repeat until the task is complete or you stop. If it reaches `--max-iterations`, it asks whether to continue, generate a report, or quit.
+7. Generate a structured pentest report from the session at any time.
 
 ## Disclaimer
 

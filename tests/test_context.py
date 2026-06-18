@@ -134,6 +134,44 @@ class TestContextManager:
         after_tokens = sum(estimate_tokens(m["content"]) for m in msgs)
         assert after_tokens < before_tokens
 
+    def test_set_plan_pins_after_task(self):
+        ctx = ContextManager("sys", "task")
+        ctx.set_plan("1. step one\n2. step two")
+        msgs = ctx.get_messages()
+        assert len(msgs) == 3
+        assert msgs[2]["role"] == "assistant"
+        assert "step one" in msgs[2]["content"]
+        assert msgs[2]["content"].startswith("PLAN:")
+
+    def test_set_plan_replaces_existing(self):
+        ctx = ContextManager("sys", "task")
+        ctx.set_plan("first plan")
+        ctx.set_plan("second plan")
+        msgs = ctx.get_messages()
+        assert len(msgs) == 3  # not duplicated
+        assert "second plan" in msgs[2]["content"]
+        assert "first plan" not in msgs[2]["content"]
+
+    def test_set_plan_replace_syncs_raw_history(self):
+        ctx = ContextManager("sys", "task")
+        ctx.set_plan("first plan")
+        ctx.set_plan("second plan")
+        raw = ctx.get_raw_messages()
+        # raw history (used for reports) must reflect the latest plan, not stale
+        assert raw[2]["content"] == "PLAN:\nsecond plan"
+        assert all("first plan" not in m["content"] for m in raw)
+
+    def test_compression_preserves_plan(self):
+        ctx = ContextManager("sys", "task", max_context_tokens=100, preserve_recent=2)
+        ctx.set_plan("PINNED PLAN STEP")
+        for i in range(20):
+            ctx.add_assistant(f"resp {i} " + "x" * 200)
+            ctx.add_tool_result("bash", "out " + "y" * 200)
+        msgs = ctx.get_messages()
+        # Plan stays pinned right after the task and is never compressed away
+        assert msgs[1]["content"] == "task"
+        assert "PINNED PLAN STEP" in msgs[2]["content"]
+
     def test_assistant_action_preserved_in_compression(self):
         ctx = ContextManager("sys", "task", max_context_tokens=100, preserve_recent=2)
         long_reasoning = "x" * 300 + '\nACTION: {"tool": "bash", "args": {"command": "ls"}}'
