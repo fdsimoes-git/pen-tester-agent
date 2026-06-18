@@ -152,6 +152,15 @@ class TestContextManager:
         assert "second plan" in msgs[2]["content"]
         assert "first plan" not in msgs[2]["content"]
 
+    def test_set_plan_replace_syncs_raw_history(self):
+        ctx = ContextManager("sys", "task")
+        ctx.set_plan("first plan")
+        ctx.set_plan("second plan")
+        raw = ctx.get_raw_messages()
+        # raw history (used for reports) must reflect the latest plan, not stale
+        assert raw[2]["content"] == "PLAN:\nsecond plan"
+        assert all("first plan" not in m["content"] for m in raw)
+
     def test_compression_preserves_plan(self):
         ctx = ContextManager("sys", "task", max_context_tokens=100, preserve_recent=2)
         ctx.set_plan("PINNED PLAN STEP")

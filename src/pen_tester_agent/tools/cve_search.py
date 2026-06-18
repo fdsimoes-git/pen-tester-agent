@@ -1,6 +1,7 @@
 """CVE search tool for vulnerability lookups (CIRCL CVE API, v5 schema)."""
 
 import re
+import time
 from urllib.parse import quote
 
 import httpx
@@ -13,6 +14,12 @@ _REQUEST_TIMEOUT = 15
 _MAX_SUMMARY_CHARS = 500
 # CVSS metric keys in CVE v5 records, most-preferred first.
 _CVSS_KEYS = ("cvssV4_0", "cvssV3_1", "cvssV3_0", "cvssV2_0")
+# CIRCL rate-limits bursts; retry transient throttling/unavailability.
+_USER_AGENT = "pen-tester-agent/1.0 (+https://github.com/fdsimoes-git/pen-tester-agent)"
+_RETRY_STATUS = (429, 503)
+_MAX_RETRIES = 3
+_BACKOFF_BASE = 1.0
+_MAX_BACKOFF = 8.0
 
 
 class CveSearchTool(Tool):
@@ -63,9 +70,7 @@ class CveSearchTool(Tool):
         """Look up a specific CVE by its ID."""
         url = f"{_CIRCL_API_BASE}/cve/{cve_id}"
         try:
-            with httpx.Client(timeout=_REQUEST_TIMEOUT) as client:
-                resp = client.get(url)
-
+            resp = _get(url)
             if resp.status_code == 404:
                 return ToolResult(output=f"CVE {cve_id} not found.", success=True)
             resp.raise_for_status()
@@ -94,9 +99,7 @@ class CveSearchTool(Tool):
         product = quote("_".join(parts[1:]).lower(), safe="")
         url = f"{_CIRCL_API_BASE}/search/{vendor}/{product}"
         try:
-            with httpx.Client(timeout=_REQUEST_TIMEOUT) as client:
-                resp = client.get(url)
-
+            resp = _get(url)
             if resp.status_code == 404:
                 return ToolResult(
                     output=f"No CVEs found for '{query}'.", success=True,
@@ -124,6 +127,34 @@ def _format_search_output(query, payload, records, max_results) -> str:
         lines.append(_format_cve(record))
         lines.append("")
     return "\n".join(lines)
+
+
+def _get(url: str) -> httpx.Response:
+    """GET with a descriptive User-Agent and backoff on 429/503.
+
+    CIRCL throttles bursts, so transient 429/503 responses are retried
+    (honoring Retry-After when present) to keep a session's CVE lookups
+    from failing spuriously. Connection errors and other statuses are
+    returned/raised to the caller unchanged.
+    """
+    headers = {"User-Agent": _USER_AGENT, "Accept": "application/json"}
+    with httpx.Client(timeout=_REQUEST_TIMEOUT, headers=headers) as client:
+        for attempt in range(_MAX_RETRIES):
+            resp = client.get(url)
+            if resp.status_code not in _RETRY_STATUS:
+                return resp
+            time.sleep(_retry_delay(resp.headers.get("Retry-After"), attempt))
+        return client.get(url)
+
+
+def _retry_delay(retry_after, attempt: int) -> float:
+    """Seconds before the next retry: honor Retry-After, else exp backoff."""
+    if retry_after:
+        try:
+            return min(float(retry_after), _MAX_BACKOFF)
+        except (TypeError, ValueError):
+            pass
+    return min(_BACKOFF_BASE * (2 ** attempt), _MAX_BACKOFF)
 
 
 def _extract_search_records(payload) -> list:

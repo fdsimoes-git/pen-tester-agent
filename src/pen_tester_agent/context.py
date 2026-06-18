@@ -80,7 +80,10 @@ class ContextManager:
         """
         plan_msg = {"role": "assistant", "content": f"PLAN:\n{plan}"}
         if self._has_plan:
+            # Keep both views in sync so a re-plan doesn't leave a stale
+            # plan in the raw history used for report generation.
             self._messages[2] = plan_msg
+            self._raw_messages[2] = plan_msg
             return
         self._messages.insert(2, plan_msg)
         self._raw_messages.insert(2, plan_msg)

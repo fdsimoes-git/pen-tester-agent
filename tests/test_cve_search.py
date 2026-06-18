@@ -3,7 +3,11 @@ import os
 import httpx
 import pytest
 
-from pen_tester_agent.tools.cve_search import CveSearchTool
+from pen_tester_agent.tools.cve_search import (
+    CveSearchTool,
+    _MAX_RETRIES,
+    _retry_delay,
+)
 
 
 @pytest.fixture
@@ -169,6 +173,37 @@ class TestCveSearchTool:
         r = cve_tool.execute(query="cve-2021-44228")
         assert r.success is True
         assert "CVE-2021-44228" in r.output
+
+    def test_retries_on_429_then_succeeds(self, cve_tool, httpx_mock, monkeypatch):
+        monkeypatch.setattr("pen_tester_agent.tools.cve_search.time.sleep", lambda _s: None)
+        httpx_mock.add_response(
+            url="https://cve.circl.lu/api/cve/CVE-2021-44228", status_code=429,
+        )
+        httpx_mock.add_response(
+            url="https://cve.circl.lu/api/cve/CVE-2021-44228",
+            json=v5_record("CVE-2021-44228", "Log4Shell", score=10, severity="CRITICAL"),
+        )
+        r = cve_tool.execute(query="CVE-2021-44228")
+        assert r.success is True
+        assert "CVE-2021-44228" in r.output
+
+    def test_429_exhausts_retries_to_honest_error(self, cve_tool, httpx_mock, monkeypatch):
+        monkeypatch.setattr("pen_tester_agent.tools.cve_search.time.sleep", lambda _s: None)
+        for _ in range(_MAX_RETRIES + 1):
+            httpx_mock.add_response(
+                url="https://cve.circl.lu/api/cve/CVE-2021-44228", status_code=429,
+            )
+        r = cve_tool.execute(query="CVE-2021-44228")
+        assert r.success is False
+        assert "error" in r.output.lower()
+
+
+def test_retry_delay_honors_retry_after_and_backoff():
+    assert _retry_delay("3", 0) == 3.0           # explicit Retry-After
+    assert _retry_delay("999", 0) == 8.0         # capped at _MAX_BACKOFF
+    assert _retry_delay(None, 0) == 1.0          # base backoff
+    assert _retry_delay(None, 2) == 4.0          # exponential
+    assert _retry_delay("nope", 1) == 2.0        # bad header -> backoff
 
 
 @pytest.mark.skipif(
