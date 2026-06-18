@@ -1,4 +1,4 @@
-from pen_tester_agent.providers.ollama import OllamaProvider
+from pen_tester_agent.providers.ollama import OllamaProvider, _DEFAULT_NUM_CTX
 
 
 def _patch_chat(monkeypatch, captured):
@@ -22,10 +22,21 @@ def test_num_ctx_passed_as_option(monkeypatch):
     assert captured["options"] == {"num_ctx": 24000}
 
 
-def test_no_num_ctx_sends_no_options(monkeypatch):
+def test_default_num_ctx_avoids_truncation(monkeypatch):
+    # A direct provider with no explicit num_ctx must still set a real window,
+    # not fall back to Ollama's ~4K default.
     captured = {}
     _patch_chat(monkeypatch, captured)
     provider = OllamaProvider(model="m")
+    provider.chat([{"role": "user", "content": "hi"}])
+    assert captured["options"] == {"num_ctx": _DEFAULT_NUM_CTX}
+    assert _DEFAULT_NUM_CTX > 4096
+
+
+def test_explicit_none_num_ctx_defers_to_ollama(monkeypatch):
+    captured = {}
+    _patch_chat(monkeypatch, captured)
+    provider = OllamaProvider(model="m", num_ctx=None)
     provider.chat([{"role": "user", "content": "hi"}])
     assert captured["options"] is None
 
